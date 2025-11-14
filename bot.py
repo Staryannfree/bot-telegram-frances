@@ -13,7 +13,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
-    CallbackQueryHandler,  # <--- IMPORTANTE
+    CallbackQueryHandler,
 )
 
 # Lê o TOKEN da variável de ambiente (Render -> Environment -> TOKEN)
@@ -50,7 +50,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     botoes = [
-        # AGORA: botão de callback (não abre a plataforma direto)
         [
             InlineKeyboardButton(
                 "🌐 Conhecer a plataforma",
@@ -76,9 +75,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton(
                 "📅 Agendar Aula experimental grátis",
-                web_app=WebAppInfo(
-                    url="https://aulasdefrances.com/registro-alunos/"
-                ),
+                callback_data="agendar_aula",  # <--- AGORA VAI PARA UM FLUXO COM TEXTO
             )
         ],
         [
@@ -92,9 +89,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton(
                 "📲 Falar com o Prof. Yann no WhatsApp",
-                web_app=WebAppInfo(
-                    url="https://wa.me/5562996263600"  # com DDI do Brasil (55)
-                ),
+                url="https://wa.me/5562996263600",  # <--- SEM WebAppInfo
             )
         ],
     ]
@@ -115,7 +110,7 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Estou online! ✅")
 
 
-# Handler para os botões de callback (perguntinha + resposta)
+# Handler para os botões de callback
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -148,7 +143,40 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 2) Quando a pessoa escolhe um motivo
+    # 2) Fluxo da Aula experimental
+    if query.data == "agendar_aula":
+        texto_aula = (
+            "✨ Sua *aula experimental grátis* é um momento exclusivo entre você e o Prof. Yann.\n\n"
+            "Para deixar tudo organizado, você vai:\n"
+            "1️⃣ Criar seu cadastro\n"
+            "2️⃣ Verificar sua conta\n"
+            "3️⃣ Escolher o dia e horário que encaixam melhor na sua rotina\n\n"
+            "Esse passo a passo é importante porque o prof. reserva um horário só para você, "
+            "e queremos garantir que é uma pessoa real falando com a gente — não um robô 🤖.\n\n"
+            "Assim, ele consegue preparar a aula com cuidado e te entregar uma experiência realmente personalizada."
+        )
+
+        teclado_cadastro = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "✨ Criar meu cadastro",
+                        web_app=WebAppInfo(
+                            url="https://aulasdefrances.com/registro-alunos/"
+                        ),
+                    )
+                ]
+            ]
+        )
+
+        await query.message.reply_text(
+            texto_aula,
+            reply_markup=teclado_cadastro,
+            disable_web_page_preview=True,
+        )
+        return
+
+    # 3) Quando a pessoa escolhe um motivo
     if query.data.startswith("motivo_"):
         motivos_map = {
             "motivo_trabalho": "Trabalho",
@@ -162,7 +190,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Mensagem para o usuário
         texto_usuario = (
             f"Perfeito! 🎯\n\n"
-            f"Vou te mostrar a plataforma pensando em **{motivo_texto}**.\n\n"
+            f"Vou te mostrar a plataforma pensando em *{motivo_texto}*.\n\n"
             f"Quando quiser, toque no botão abaixo para abrir a plataforma:"
         )
 
@@ -220,7 +248,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(CallbackQueryHandler(handle_callback))  # <--- NOVO
+    app.add_handler(CallbackQueryHandler(handle_callback))
 
     print("Bot rodando no Render...")
     app.run_polling()
@@ -228,4 +256,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

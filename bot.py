@@ -13,10 +13,15 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
+    CallbackQueryHandler,  # <--- IMPORTANTE
 )
 
 # Lê o TOKEN da variável de ambiente (Render -> Environment -> TOKEN)
 TOKEN = os.getenv("TOKEN")
+
+# Chat ID do admin (seu ID pessoal ou de um grupo/canal)
+# Configure no Render -> Environment -> ADMIN_CHAT_ID
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
 
 # --------- Servidor HTTP "fake" só pra agradar o Render ---------
@@ -45,10 +50,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     botoes = [
+        # AGORA: botão de callback (não abre a plataforma direto)
         [
             InlineKeyboardButton(
                 "🌐 Conhecer a plataforma",
-                web_app=WebAppInfo(url="https://www.aulasdefrances.com"),
+                callback_data="conhecer_plataforma",
             )
         ],
         [
@@ -109,6 +115,98 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Estou online! ✅")
 
 
+# Handler para os botões de callback (perguntinha + resposta)
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user = query.from_user
+
+    # 1) Quando a pessoa clica em "🌐 Conhecer a plataforma"
+    if query.data == "conhecer_plataforma":
+        texto_pergunta = (
+            "Legal! 😄\n\n"
+            "Quer aprender francês principalmente para:\n\n"
+            "1️⃣ Trabalho\n"
+            "2️⃣ Viagem\n"
+            "3️⃣ Estudo / intercâmbio\n"
+            "4️⃣ Interesse pessoal\n\n"
+            "Escolha uma opção:"
+        )
+
+        botoes_motivo = [
+            [InlineKeyboardButton("1️⃣ Trabalho", callback_data="motivo_trabalho")],
+            [InlineKeyboardButton("2️⃣ Viagem", callback_data="motivo_viagem")],
+            [InlineKeyboardButton("3️⃣ Estudo / intercâmbio", callback_data="motivo_estudo")],
+            [InlineKeyboardButton("4️⃣ Interesse pessoal", callback_data="motivo_pessoal")],
+        ]
+
+        teclado_motivo = InlineKeyboardMarkup(botoes_motivo)
+
+        await query.message.reply_text(
+            texto_pergunta,
+            reply_markup=teclado_motivo,
+        )
+        return
+
+    # 2) Quando a pessoa escolhe um motivo
+    if query.data.startswith("motivo_"):
+        motivos_map = {
+            "motivo_trabalho": "Trabalho",
+            "motivo_viagem": "Viagem",
+            "motivo_estudo": "Estudo / intercâmbio",
+            "motivo_pessoal": "Interesse pessoal",
+        }
+
+        motivo_texto = motivos_map.get(query.data, "Outro")
+
+        # Mensagem para o usuário
+        texto_usuario = (
+            f"Perfeito! 🎯\n\n"
+            f"Vou te mostrar a plataforma pensando em **{motivo_texto}**.\n\n"
+            f"Quando quiser, toque no botão abaixo para abrir a plataforma:"
+        )
+
+        botao_abrir_plataforma = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "🌐 Abrir plataforma",
+                        web_app=WebAppInfo(
+                            url="https://www.aulasdefrances.com"
+                        ),
+                    )
+                ]
+            ]
+        )
+
+        await query.message.reply_text(
+            texto_usuario,
+            reply_markup=botao_abrir_plataforma,
+            disable_web_page_preview=True,
+        )
+
+        # Resumo para o admin (se estiver configurado)
+        if ADMIN_CHAT_ID:
+            resumo = (
+                "📥 *Novo interesse registrado*\n\n"
+                f"*Usuário:* {user.first_name} "
+                f"{'(@' + user.username + ')' if user.username else ''}\n"
+                f"*ID:* `{user.id}`\n"
+                f"*Motivo:* {motivo_texto}"
+            )
+
+            try:
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=resumo,
+                    parse_mode="Markdown",
+                )
+            except Exception as e:
+                print(f"Erro ao enviar resumo para o admin: {e}")
+
+        return
+
+
 def main():
     if not TOKEN:
         raise RuntimeError("TOKEN não encontrado. Configure a variável de ambiente TOKEN no Render.")
@@ -122,6 +220,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
+    app.add_handler(CallbackQueryHandler(handle_callback))  # <--- NOVO
 
     print("Bot rodando no Render...")
     app.run_polling()
@@ -129,3 +228,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

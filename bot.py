@@ -7,7 +7,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
-    WebAppInfo,  # <- IMPORTANTE para o WebApp
+    WebAppInfo,
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -32,6 +32,10 @@ def start_dummy_http_server():
 
 # ---------------------- Handlers do bot ---------------------- #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # LOG pra gente ver no Render se o comando chegou
+    user = update.effective_user
+    print(f"Recebi /start de {user.id} - {user.first_name}")
+
     texto_inicial = (
         "Bonjour! 🇫🇷✨\n\n"
         "Antes de começar sua jornada no francês, entre no Grupo Oficial da Plataforma!\n"
@@ -40,7 +44,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Depois, é só escolher uma das opções abaixo para continuar:"
     )
 
-    # Botões agora usam WebAppInfo para abrir o site dentro do Telegram (WebApp/Mini App)
     botoes = [
         [
             InlineKeyboardButton(
@@ -84,7 +87,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📲 Falar com o Prof. Yann no WhatsApp",
                 web_app=WebAppInfo(
-                    url="https://wa.me/62996263600/"
+                    url="https://wa.me/5562996263600"  # com DDI do Brasil (55)
                 ),
             )
         ],
@@ -100,6 +103,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+# Comando simples só pra testar se o bot está vivo
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("Recebi /ping")
+    await update.message.reply_text("Estou online! ✅")
+
+
 def main():
     if not TOKEN:
         raise RuntimeError("TOKEN não encontrado. Configure a variável de ambiente TOKEN no Render.")
@@ -112,6 +121,7 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ping", ping))
 
     print("Bot rodando no Render...")
     app.run_polling()
@@ -119,4 +129,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

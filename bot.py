@@ -1,4 +1,8 @@
 import os
+import threading
+import http.server
+import socketserver
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -7,11 +11,22 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# Lê o TOKEN da variável de ambiente (que vamos configurar no Render)
+# Lê o TOKEN da variável de ambiente (Render -> Environment -> TOKEN)
 TOKEN = os.getenv("TOKEN")
 
 
-# /start – mensagem inicial + botões
+# --------- Servidor HTTP "fake" só pra agradar o Render ---------
+def start_dummy_http_server():
+    """Abre um servidor HTTP simples na porta definida em PORT."""
+    port = int(os.environ.get("PORT", "10000"))
+    handler = http.server.SimpleHTTPRequestHandler
+
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        print(f"Servidor HTTP de saúde rodando na porta {port}")
+        httpd.serve_forever()
+
+
+# ---------------------- Handlers do bot ---------------------- #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto_inicial = (
         "Bonjour! 🇫🇷\n\n"
@@ -38,7 +53,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-# Handler dos cliques nos botões
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -81,7 +95,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         texto = "Ops, opção inválida. Tente novamente."
 
-    # Envia a mensagem sem apagar o menu
     await query.message.reply_text(texto)
 
 
@@ -89,13 +102,17 @@ def main():
     if not TOKEN:
         raise RuntimeError("TOKEN não encontrado. Configure a variável de ambiente TOKEN no Render.")
 
+    # Inicia o servidor HTTP fake em uma thread separada
+    http_thread = threading.Thread(target=start_dummy_http_server, daemon=True)
+    http_thread.start()
+
+    # Inicia o bot do Telegram
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_menu))
 
     print("Bot rodando no Render...")
-    # Aqui o python-telegram-bot cuida do asyncio pra gente
     app.run_polling()
 
 

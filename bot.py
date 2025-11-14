@@ -3,11 +3,15 @@ import threading
 import http.server
 import socketserver
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
+    WebAppInfo,  # <- IMPORTANTE para o WebApp
+)
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    CallbackQueryHandler,
     ContextTypes,
 )
 
@@ -36,12 +40,46 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Depois, é só escolher uma das opções abaixo para continuar:"
     )
 
+    # Botões agora usam WebAppInfo para abrir o site dentro do Telegram (WebApp/Mini App)
     botoes = [
-        [InlineKeyboardButton("🌐 Conhecer a plataforma", callback_data="menu1")],
-        [InlineKeyboardButton("📊 Teste de nivelamento grátis", callback_data="menu2")],
-        [InlineKeyboardButton("⭐ Sobre o Prof. Yann", callback_data="menu3")],
-        [InlineKeyboardButton("📅 Agendar Aula experimental grátis", callback_data="menu4")],
-        [InlineKeyboardButton("🔑 Já sou Aluno – Fazer Login", callback_data="menu5")],
+        [
+            InlineKeyboardButton(
+                "🌐 Conhecer a plataforma",
+                web_app=WebAppInfo(url="https://www.aulasdefrances.com"),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📊 Teste de nivelamento grátis",
+                web_app=WebAppInfo(
+                    url="https://aulasdefrances.com/teste-de-nivelamento-de-frances/"
+                ),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "⭐ Sobre o Prof. Yann",
+                web_app=WebAppInfo(
+                    url="https://aulasdefrances.com/professor-nativo-de-frances-yann-amoussou/"
+                ),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📅 Agendar Aula experimental grátis",
+                web_app=WebAppInfo(
+                    url="https://aulasdefrances.com/registro-alunos/"
+                ),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🔑 Já sou Aluno – Fazer Login",
+                web_app=WebAppInfo(
+                    url="https://aulasdefrances.com/login-alunos/"
+                ),
+            )
+        ],
     ]
 
     teclado = InlineKeyboardMarkup(botoes)
@@ -52,51 +90,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=teclado,
             disable_web_page_preview=True,
         )
-
-
-async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "menu1":
-        texto = (
-            "🇫🇷 Acesse agora a plataforma completa com 3.000+ livros, audiobooks, "
-            "módulos A1-C2 e exercícios interativos! Comece sua jornada de imersão no francês:\n\n"
-            "https://www.aulasdefrances.com"
-        )
-
-    elif query.data == "menu2":
-        texto = (
-            "📊 Teste seu francês agora e receba feedback personalizado do Prof. Yann! "
-            "Avaliamos sua compreensão, pronúncia e escrita para criar um plano de estudos à sua medida:\n\n"
-            "https://aulasdefrances.com/teste-de-nivelamento-de-frances/"
-        )
-
-    elif query.data == "menu3":
-        texto = (
-            "👨‍🏫 Conheça Prof. Yann: professor nativo francês com 10+ anos de experiência, "
-            "especializado em imersão pedagógica e metodologia moderna. "
-            "Saiba por que seus alunos adoram aprender com ele:\n\n"
-            "https://aulasdefrances.com/professor-nativo-de-frances-yann-amoussou/"
-        )
-
-    elif query.data == "menu4":
-        texto = (
-            "✨ Aula grátis para conhecer Prof. Yann! Reserve seu horário, "
-            "conheça sua metodologia e saia com um plano de estudos personalizado só para você:\n\n"
-            "https://aulasdefrances.com/registro-alunos/"
-        )
-
-    elif query.data == "menu5":
-        texto = (
-            "🔑 Bem-vindo de volta! Acesse sua conta, visualize seu progresso, "
-            "consulte materiais e acompanhe suas aulas agendadas:\n\n"
-            "https://aulasdefrances.com/login-alunos/"
-        )
-    else:
-        texto = "Ops, opção inválida. Tente novamente."
-
-    await query.message.reply_text(texto)
 
 
 def main():
@@ -111,7 +104,6 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_menu))
 
     print("Bot rodando no Render...")
     app.run_polling()

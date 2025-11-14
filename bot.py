@@ -82,6 +82,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton(
+                "🎯 Prova DELF / DALF / DILF",
+                callback_data="provas_delf_dalf_dilf",
+            )
+        ],
+        [
+            InlineKeyboardButton(
                 "📅 Agendar Aula experimental grátis",
                 callback_data="agendar_aula",
             )
@@ -195,14 +201,156 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=int(ADMIN_CHAT_ID),
-                    text=resumo,  # sem parse_mode pra evitar erro silencioso
+                    text=resumo,
                 )
             except Exception as e:
                 print(f"Erro ao enviar resumo de aula experimental para o admin: {e}")
 
         return
 
-    # 3) Quando a pessoa escolhe um motivo
+    # 3) Menu de provas DELF/DALF/DILF – pergunta qual prova
+    if query.data == "provas_delf_dalf_dilf":
+        texto_exames = (
+            "🎯 Que legal que você está de olho em certificação oficial de francês!\n\n"
+            "Seu foco está em qual prova?\n\n"
+            "🇫🇷 DELF – níveis A1 a B2\n"
+            "🇫🇷 DALF – níveis C1 e C2\n"
+            "🇫🇷 DILF – nível inicial A1.1\n\n"
+            "Escolha uma opção:"
+        )
+
+        botoes_exames = [
+            [InlineKeyboardButton("DELF", callback_data="exame_delf")],
+            [InlineKeyboardButton("DALF", callback_data="exame_dalf")],
+            [InlineKeyboardButton("DILF", callback_data="exame_dilf")],
+        ]
+
+        teclado_exames = InlineKeyboardMarkup(botoes_exames)
+
+        await query.message.reply_text(
+            texto_exames,
+            reply_markup=teclado_exames,
+        )
+        return
+
+    # 4) Escolha do exame → pergunta nível correspondente
+    if query.data == "exame_delf":
+        texto_nivel = (
+            "Ótimo! 🇫🇷 Prova DELF.\n\n"
+            "Qual nível é do seu interesse?\n\n"
+            "A1 • A2 • B1 • B2"
+        )
+
+        botoes_nivel = [
+            [InlineKeyboardButton("DELF A1", callback_data="nivel_delf_a1")],
+            [InlineKeyboardButton("DELF A2", callback_data="nivel_delf_a2")],
+            [InlineKeyboardButton("DELF B1", callback_data="nivel_delf_b1")],
+            [InlineKeyboardButton("DELF B2", callback_data="nivel_delf_b2")],
+        ]
+
+        await query.message.reply_text(
+            texto_nivel,
+            reply_markup=InlineKeyboardMarkup(botoes_nivel),
+        )
+        return
+
+    if query.data == "exame_dalf":
+        texto_nivel = (
+            "Perfeito! 🇫🇷 Prova DALF.\n\n"
+            "Qual nível é do seu interesse?\n\n"
+            "C1 • C2"
+        )
+
+        botoes_nivel = [
+            [InlineKeyboardButton("DALF C1", callback_data="nivel_dalf_c1")],
+            [InlineKeyboardButton("DALF C2", callback_data="nivel_dalf_c2")],
+        ]
+
+        await query.message.reply_text(
+            texto_nivel,
+            reply_markup=InlineKeyboardMarkup(botoes_nivel),
+        )
+        return
+
+    if query.data == "exame_dilf":
+        texto_nivel = (
+            "Excelente! 🇫🇷 Prova DILF.\n\n"
+            "Atualmente o foco é no nível inicial:\n\n"
+            "A1.1 – primeira etapa para quem está começando do zero."
+        )
+
+        botoes_nivel = [
+            [InlineKeyboardButton("DILF A1.1", callback_data="nivel_dilf_a11")],
+        ]
+
+        await query.message.reply_text(
+            texto_nivel,
+            reply_markup=InlineKeyboardMarkup(botoes_nivel),
+        )
+        return
+
+    # 5) Nível escolhido → manda link + avisa o professor
+    if query.data.startswith("nivel_"):
+        niveis_map = {
+            "nivel_delf_a1": ("DELF", "A1"),
+            "nivel_delf_a2": ("DELF", "A2"),
+            "nivel_delf_b1": ("DELF", "B1"),
+            "nivel_delf_b2": ("DELF", "B2"),
+            "nivel_dalf_c1": ("DALF", "C1"),
+            "nivel_dalf_c2": ("DALF", "C2"),
+            "nivel_dilf_a11": ("DILF", "A1.1"),
+        }
+
+        exame, nivel = niveis_map.get(query.data, ("Prova desconhecida", "Nível desconhecido"))
+
+        texto_final = (
+            "Perfeito! 🎓\n\n"
+            f"Anotei que seu foco é na prova {exame} nível {nivel}.\n\n"
+            "No link abaixo você encontra mais informações sobre as provas "
+            "e como se preparar com o Prof. Yann:"
+        )
+
+        teclado_prova = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📚 Ver detalhes das provas",
+                        web_app=WebAppInfo(
+                            url="https://aulasdefrances.com/delf-dalf/"
+                        ),
+                    )
+                ]
+            ]
+        )
+
+        await query.message.reply_text(
+            texto_final,
+            reply_markup=teclado_prova,
+            disable_web_page_preview=True,
+        )
+
+        # Notificação para o admin
+        if ADMIN_CHAT_ID:
+            resumo = (
+                "📥 Novo interesse em PROVA OFICIAL\n\n"
+                f"Usuário: {user.first_name} "
+                f"{'(@' + user.username + ')' if user.username else ''}\n"
+                f"ID: {user.id}\n"
+                f"Prova: {exame}\n"
+                f"Nível: {nivel}"
+            )
+            print(f"Tentando enviar resumo de prova para o admin ({ADMIN_CHAT_ID})")
+            try:
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=resumo,
+                )
+            except Exception as e:
+                print(f"Erro ao enviar resumo de prova para o admin: {e}")
+
+        return
+
+    # 6) Quando a pessoa escolhe um motivo para conhecer a plataforma
     if query.data.startswith("motivo_"):
         motivos_map = {
             "motivo_trabalho": "Trabalho",
@@ -213,11 +361,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         motivo_texto = motivos_map.get(query.data, "Outro")
 
-        # Mensagem para o usuário
+        # Mensagem para o usuário (TEXTO AJUSTADO)
         texto_usuario = (
-            f"Perfeito! 🎯\n\n"
-            f"Vou te mostrar a plataforma pensando em {motivo_texto}.\n\n"
-            f"Quando quiser, toque no botão abaixo para abrir a plataforma:"
+            "Perfeito! 🎯\n\n"
+            f"O Prof. Yann já acompanhou muitos alunos cujo foco principal era: {motivo_texto}.\n"
+            "Nossa plataforma tem toda a estrutura para que você aprenda de verdade, "
+            "com materiais organizados, prática guiada e acompanhamento profissional.\n\n"
+            "Quando quiser, toque no botão abaixo para abrir a plataforma.\n"
+            "Se fizer sentido para você, aproveite e agende também a sua aula experimental grátis. ✨"
         )
 
         botao_abrir_plataforma = InlineKeyboardMarkup(
@@ -252,7 +403,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=int(ADMIN_CHAT_ID),
-                    text=resumo,  # sem parse_mode pra evitar erro silencioso
+                    text=resumo,
                 )
             except Exception as e:
                 print(f"Erro ao enviar resumo de motivo para o admin: {e}")

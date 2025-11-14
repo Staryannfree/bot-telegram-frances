@@ -85,7 +85,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(texto)
 
 
-async def main():
+def main():
     if not TOKEN:
         raise RuntimeError("TOKEN não encontrado. Configure a variável de ambiente TOKEN no Render.")
 
@@ -95,9 +95,10 @@ async def main():
     app.add_handler(CallbackQueryHandler(handle_menu))
 
     print("Bot rodando no Render...")
-    await app.run_polling()
+    # Aqui o python-telegram-bot cuida do asyncio pra gente
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
+

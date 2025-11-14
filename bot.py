@@ -2,6 +2,7 @@ import os
 import threading
 import http.server
 import socketserver
+from datetime import datetime  # para registrar horário
 
 from telegram import (
     InlineKeyboardButton,
@@ -41,6 +42,56 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     print(f"Recebi /start de {user.id} - {user.first_name}")
 
+    # --------- Informação extra para o admin --------- #
+    # 1) Origem (payload do deep link: /start origem)
+    payload = None
+    if update.message and update.message.text:
+        partes = update.message.text.split(maxsplit=1)
+        if len(partes) > 1:
+            payload = partes[1].strip()
+    origem = payload if payload else "Não informada"
+
+    # 2) Idioma do Telegram do usuário
+    idioma = user.language_code if user.language_code else "desconhecido"
+
+    # 3) Status: primeira vez ou recorrente (na memória do bot)
+    known_users = context.bot_data.setdefault("known_users", set())
+    primeira_vez = user.id not in known_users
+    known_users.add(user.id)
+    status = "Primeira vez" if primeira_vez else "Usuário recorrente"
+
+    # 4) Link direto pro usuário (se tiver username)
+    if user.username:
+        link_usuario = f"https://t.me/{user.username}"
+    else:
+        link_usuario = "Sem username – responda direto ao chat no Telegram."
+
+    # 5) Horário de início
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Notificação para o admin sempre que alguém iniciar o bot
+    if ADMIN_CHAT_ID:
+        resumo_inicio = (
+            "🚀 Novo início de conversa com o bot\n\n"
+            f"Usuário: {user.first_name} "
+            f"{'(@' + user.username + ')' if user.username else ''}\n"
+            f"ID: {user.id}\n"
+            f"Idioma no Telegram: {idioma}\n"
+            f"Origem (payload /start): {origem}\n"
+            f"Status: {status}\n"
+            f"Início (horário do servidor): {start_time}\n"
+            f"Link: {link_usuario}"
+        )
+        print(f"Tentando enviar aviso de início para o admin ({ADMIN_CHAT_ID})")
+        try:
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=resumo_inicio,
+            )
+        except Exception as e:
+            print(f"Erro ao enviar aviso de início para o admin: {e}")
+
+    # --------- Mensagem inicial para o usuário --------- #
     texto_inicial = (
         "Bonjour! 🇫🇷✨\n\n"
         "Antes de começar sua jornada no francês, entre no Grupo Oficial da Plataforma!\n"
@@ -361,7 +412,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         motivo_texto = motivos_map.get(query.data, "Outro")
 
-        # Mensagem para o usuário (TEXTO AJUSTADO)
+        # Mensagem para o usuário
         texto_usuario = (
             "Perfeito! 🎯\n\n"
             f"O Prof. Yann já acompanhou muitos alunos cujo foco principal era: {motivo_texto}.\n"

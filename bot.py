@@ -76,7 +76,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "🔑 Já sou Aluno – Fazer Login",
                 web_app=WebAppInfo(
-                    url="https://aulasdefrances.com/login-alunos/"
+                    url="https://aulasdefrances.com/dashboard/bemvindo/"
+                ),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📲 Falar com o Prof. Yann no WhatsApp",
+                web_app=WebAppInfo(
+                    url="https://wa.me/62996263600/"
                 ),
             )
         ],
@@ -111,3 +119,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

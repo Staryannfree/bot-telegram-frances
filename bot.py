@@ -74,8 +74,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton(
+                "📘 Ver Livro do professor",
+                web_app=WebAppInfo(
+                    url="https://aulasdefrances.com/#t7ymfy4g/1"
+                ),
+            )
+        ],
+        [
+            InlineKeyboardButton(
                 "📅 Agendar Aula experimental grátis",
-                callback_data="agendar_aula",  # <--- AGORA VAI PARA UM FLUXO COM TEXTO
+                callback_data="agendar_aula",
             )
         ],
         [
@@ -89,7 +97,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton(
                 "📲 Falar com o Prof. Yann no WhatsApp",
-                url="https://wa.me/5562996263600",  # <--- SEM WebAppInfo
+                url="https://wa.me/5562996263600",
             )
         ],
     ]
@@ -146,7 +154,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 2) Fluxo da Aula experimental
     if query.data == "agendar_aula":
         texto_aula = (
-            "✨ Sua *aula experimental grátis* é um momento exclusivo entre você e o Prof. Yann.\n\n"
+            "✨ Sua aula experimental grátis é um momento exclusivo entre você e o Prof. Yann.\n\n"
             "Para deixar tudo organizado, você vai:\n"
             "1️⃣ Criar seu cadastro\n"
             "2️⃣ Verificar sua conta\n"
@@ -174,6 +182,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=teclado_cadastro,
             disable_web_page_preview=True,
         )
+
+        # Notificação automática para o admin
+        if ADMIN_CHAT_ID:
+            resumo = (
+                "📥 Novo interesse em AULA EXPERIMENTAL\n\n"
+                f"Usuário: {user.first_name} "
+                f"{'(@' + user.username + ')' if user.username else ''}\n"
+                f"ID: {user.id}"
+            )
+            print(f"Tentando enviar resumo de aula experimental para o admin ({ADMIN_CHAT_ID})")
+            try:
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=resumo,  # sem parse_mode pra evitar erro silencioso
+                )
+            except Exception as e:
+                print(f"Erro ao enviar resumo de aula experimental para o admin: {e}")
+
         return
 
     # 3) Quando a pessoa escolhe um motivo
@@ -190,7 +216,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Mensagem para o usuário
         texto_usuario = (
             f"Perfeito! 🎯\n\n"
-            f"Vou te mostrar a plataforma pensando em *{motivo_texto}*.\n\n"
+            f"Vou te mostrar a plataforma pensando em {motivo_texto}.\n\n"
             f"Quando quiser, toque no botão abaixo para abrir a plataforma:"
         )
 
@@ -216,21 +242,20 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Resumo para o admin (se estiver configurado)
         if ADMIN_CHAT_ID:
             resumo = (
-                "📥 *Novo interesse registrado*\n\n"
-                f"*Usuário:* {user.first_name} "
+                "📥 Novo interesse em CONHECER A PLATAFORMA\n\n"
+                f"Usuário: {user.first_name} "
                 f"{'(@' + user.username + ')' if user.username else ''}\n"
-                f"*ID:* `{user.id}`\n"
-                f"*Motivo:* {motivo_texto}"
+                f"ID: {user.id}\n"
+                f"Motivo: {motivo_texto}"
             )
-
+            print(f"Tentando enviar resumo de motivo para o admin ({ADMIN_CHAT_ID})")
             try:
                 await context.bot.send_message(
                     chat_id=int(ADMIN_CHAT_ID),
-                    text=resumo,
-                    parse_mode="Markdown",
+                    text=resumo,  # sem parse_mode pra evitar erro silencioso
                 )
             except Exception as e:
-                print(f"Erro ao enviar resumo para o admin: {e}")
+                print(f"Erro ao enviar resumo de motivo para o admin: {e}")
 
         return
 

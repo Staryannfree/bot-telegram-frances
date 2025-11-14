@@ -28,14 +28,13 @@ def start_dummy_http_server():
 
 # ---------------------- Handlers do bot ---------------------- #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-texto_inicial = (
-    "Bonjour! 🇫🇷✨\n\n"
-    "Antes de começar sua jornada no francês, entre no Grupo Oficial da Plataforma!\n"
-    "Lá você recebe dicas diárias, materiais gratuitos, avisos importantes e suporte direto do Prof. Yann:\n\n"
-    "👉 Junte-se agora: https://t.me/+0KMPSFwjfiZkM2Qx\n\n"
-    "Depois, é só escolher uma das opções abaixo para continuar:"
-)
-
+    texto_inicial = (
+        "Bonjour! 🇫🇷✨\n\n"
+        "Antes de começar sua jornada no francês, entre no Grupo Oficial da Plataforma!\n"
+        "Lá você recebe dicas diárias, materiais gratuitos, avisos importantes e suporte direto do Prof. Yann:\n\n"
+        "👉 Junte-se agora: https://t.me/+0KMPSFwjfiZkM2Qx\n\n"
+        "Depois, é só escolher uma das opções abaixo para continuar:"
+    )
 
     botoes = [
         [InlineKeyboardButton("🌐 Conhecer a plataforma", callback_data="menu1")],
@@ -120,5 +119,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
